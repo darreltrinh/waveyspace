@@ -8,7 +8,7 @@ interface Post {
 
 // for dynamic data that doesn't change often (ie. blog posts)
 export async function generateStaticParams() {
-    const posts: Post[] = await fetch('http://localhost:3000/api/content').then(
+    const posts: Post[] = await fetch('https://waveyspace.vercel.app/api/content').then(
         (res) => res.json()
     );
 
@@ -23,7 +23,7 @@ interface Props {
 
 export default async function BlogPostPage({params}: Props) {
     // deduped
-    const posts: Post[] = await fetch('http://localhost:3000/api/content').then(
+    const posts: Post[] = await fetch('https://waveyspace.vercel.app/api/content').then(
         (res) => res.json()
     )
     const post = posts.find((post) => post.slug === params.slug)!;
