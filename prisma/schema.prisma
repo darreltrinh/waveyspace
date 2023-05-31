@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("NEXT_PUBLIC_DATABASE_URL")
-  shadowDatabaseUrl = env("NEXT_PUBLIC_SHADOW_DATABASE_URL") // Only needed when using a cloud provider that doesn't support the creation of new databases, like Neon. Learn more: https://pris.ly/d/migrate-shadow
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Only needed when using a cloud provider that doesn't support the creation of new databases, like Neon. Learn more: https://pris.ly/d/migrate-shadow
 }
 
 // NextAuth Schema
@@ -50,6 +50,7 @@ model User {
   sessions      Session[]
   followedBy    Follows[] @relation("following")
   following     Follows[] @relation("follower")
+  posts         Post[]
 }
 
 model Follows {
@@ -67,4 +68,12 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Post {
+  id      String  @id @default(cuid())
+  content String
+  author  User    @relation(fields: [authorId], references: [id])
+  authorId String
+  createdAt DateTime @default(now())
 }

@@ -1,4 +1,4 @@
-import NavMenu from '@/components/NavMenu/NavMenu';
+import NavMenu from '@/components/NavMenuComponents/NavMenu';
 import './globals.css';
 import { Open_Sans } from 'next/font/google';
 import Link from 'next/link';

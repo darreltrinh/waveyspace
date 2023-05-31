@@ -20,10 +20,10 @@ export default function NavMenu() {
           <Link href={'/about'}>About</Link>
         </li>
         <li>
-          <Link href={'/blog'}>Blog</Link>
+          <Link href={'/feed'}>Feed</Link>
         </li>
         <li>
-          <Link href={'/users'}>Users</Link>
+          <Link href={'/users'}>Friends</Link>
         </li>
         <li>
             <SignInButton />
