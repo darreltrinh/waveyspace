@@ -1,6 +1,6 @@
 # Waveyspace
 
-Myspace clone based on NextJS Fireship course.
+Myspace clone because I felt like it.
 
 ## Slated enhancements
 
