@@ -62,18 +62,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { userId, title, content, slug } = body
+    const { userId, content } = body
 
-    if (!userId || !title || !content || !slug) {
+    if (!userId || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Data sanitization and write user's post to prisma database
     const post = await prisma.post.create({
       data: {
-        title,
         content,
-        slug,
         author: {
           connect: { id: userId },
         },
@@ -94,15 +92,15 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { slug } = body
+    const { id } = body
 
-    if (!slug) {
-      return NextResponse.json({ error: 'slug is required' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'Post id is required' }, { status: 400 })
     }
 
     // Remove the post from database
     const post = await prisma.post.delete({
-      where: { slug },
+      where: { id },
     })
 
     return NextResponse.json(post)
