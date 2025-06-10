@@ -1,71 +1,112 @@
-import { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from 'next-auth/react'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/prisma'
 
 // Helper function to check if the user is authenticated
-async function isAuthenticated(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req })
+async function isAuthenticated() {
+  const session = await getServerSession()
   if (!session) {
-    res.status(401).json({ error: 'You must be signed in to call this endpoint' })
-    return false
+    return { authenticated: false, response: NextResponse.json({ error: 'You must be signed in to call this endpoint' }, { status: 401 }) }
   }
-  return true
+  return { authenticated: true, session }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const method = req.method
-  const userId = req.body.userId
+export async function GET(request: NextRequest) {
+  const auth = await isAuthenticated()
+  if (!auth.authenticated) {
+    return auth.response
+  }
 
-  if (method === 'GET') {
-    if (await isAuthenticated(req, res)) {
-      // Query Posts table with prisma where a feed populates of the authenticated user's posts + followers
-      const posts = await prisma.post.findMany({
-        where: {
-          OR: [
-            { authorId: userId },
-            {
-              authorId: {
-                in: await prisma.follows.findMany({
-                  where: { followerId: userId },
-                  select: { followingId: true },
-                }),
-              },
+  const { searchParams } = new URL(request.url)
+  const userId = searchParams.get('userId')
+
+  if (!userId) {
+    return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+  }
+
+  try {
+    // Query Posts table with prisma where a feed populates of the authenticated user's posts + followers
+    const followingIds = await prisma.follows.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    })
+
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          { authorId: userId },
+          {
+            authorId: {
+              in: followingIds.map(f => f.followingId),
             },
-          ],
-        },
-        select: {
-          content: true,
-          author: true,
-        },
-      })
-      res.status(200).json(posts)
-    }
-  } else if (method === 'POST') {
-    if (await isAuthenticated(req, res)) {
-      const postData = req.body
-      // Data sanitization and write user's post to prisma database
-      const post = await prisma.post.create({
-        data: {
-          title: postData.title,
-          content: postData.content,
-          slug: postData.slug,
-          author: {
-            connect: { id: userId },
           },
+        ],
+      },
+      select: {
+        content: true,
+        author: true,
+      },
+    })
+
+    return NextResponse.json(posts)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await isAuthenticated()
+  if (!auth.authenticated) {
+    return auth.response
+  }
+
+  try {
+    const body = await request.json()
+    const { userId, title, content, slug } = body
+
+    if (!userId || !title || !content || !slug) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Data sanitization and write user's post to prisma database
+    const post = await prisma.post.create({
+      data: {
+        title,
+        content,
+        slug,
+        author: {
+          connect: { id: userId },
         },
-      })
-      res.status(201).json(post)
+      },
+    })
+
+    return NextResponse.json(post, { status: 201 })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await isAuthenticated()
+  if (!auth.authenticated) {
+    return auth.response
+  }
+
+  try {
+    const body = await request.json()
+    const { slug } = body
+
+    if (!slug) {
+      return NextResponse.json({ error: 'slug is required' }, { status: 400 })
     }
-  } else if (method === 'DELETE') {
-    if (await isAuthenticated(req, res)) {
-      const { slug } = req.body
-      // Remove the post from database
-      const post = await prisma.post.delete({
-        where: { slug: slug },
-      })
-      res.status(200).json(post)
-    }
-  } else {
-    res.status(405).end() // Method not allowed
+
+    // Remove the post from database
+    const post = await prisma.post.delete({
+      where: { slug },
+    })
+
+    return NextResponse.json(post)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 })
   }
 }
